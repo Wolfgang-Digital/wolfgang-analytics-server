@@ -1,0 +1,140 @@
+service: wolfgang-api
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-west-1
+  stage: ${opt:stage,'dev'}
+  memorySize: 512
+  timeout: 30
+  role: arn:aws:iam::754754238441:role/WolfgangAnalytics
+  environment:
+    NODE_TLS_REJECT_UNAUTHORIZED: '0'
+    DATABASE_URI: ${env:DATABASE_URI}
+
+# custom variables
+custom:
+  stages:
+    - dev
+    - prod
+  authorizers:
+    dev: arn:aws:cognito-idp:eu-west-1:754754238441:userpool/eu-west-1_uKbBI9kpB
+    prod: arn:aws:cognito-idp:eu-west-1:754754238441:userpool/eu-west-1_jRzMNuwoc
+
+package:
+  individually: true
+  exclude:
+    - '*.js'
+  include:
+    - app.js
+    - auth.js
+
+functions:
+  users:
+    handler: users.handler
+    package:
+      include:
+        - users.js
+    layers:
+      - arn:aws:lambda:eu-west-1:754754238441:layer:nodePostgres:6
+    events:
+      - http:
+          method: ANY
+          path: /users
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      - http: 
+          method: ANY
+          path: '/users/{proxy+}'
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+
+  reviews:
+    handler: reviews.handler
+    package:
+      include:
+        - reviews.js
+    layers:
+      - arn:aws:lambda:eu-west-1:754754238441:layer:nodePostgres:6
+    events:
+      - http:
+          method: ANY
+          path: /reviews
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      - http: 
+          method: ANY
+          path: '/reviews/{proxy+}'
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+
+  awarewolf:
+    handler: awarewolf.handler
+    package:
+      include:
+        - awarewolf.js
+    layers:
+      - arn:aws:lambda:eu-west-1:754754238441:layer:nodePostgres:6
+    events:
+      - http:
+          method: ANY
+          path: /awarewolf
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      - http: 
+          method: ANY
+          path: '/awarewolf/{proxy+}'
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+
+  pipeline:
+    handler: pipeline.handler
+    package:
+      include:
+        - pipeline.js
+        - pipelineUtils.js
+    layers:
+      - arn:aws:lambda:eu-west-1:754754238441:layer:nodePostgres:6
+    events:
+      - http:
+          method: ANY
+          path: /pipeline
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      - http: 
+          method: ANY
+          path: '/pipeline/{proxy+}'
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+
+  forestry:
+    handler: forestry.handler
+    package:
+      include:
+        - forestry.js
+    layers:
+      - arn:aws:lambda:eu-west-1:754754238441:layer:nodePostgres:6
+      - arn:aws:lambda:eu-west-1:754754238441:layer:node-pdf-mailer:1
+    events:
+      - http:
+          method: ANY
+          path: /forestry
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      - http: 
+          method: ANY
+          path: '/forestry/{proxy+}'
+          cors: true
+          authorizer:
+            arn: ${self:custom.authorizers.${self:provider.stage}}
+      
